@@ -191,6 +191,8 @@ protected:
     stdext::boolean<false> m_footStepDrawn;
     ScheduledEventPtr m_walkUpdateEvent;
     ScheduledEventPtr m_walkFinishAnimEvent;
+    // Scheduled event triggered to make shadows disappear
+    ScheduledEventPtr m_walkFinishedEvent;
     EventPtr m_disappearEvent;
     Point m_walkOffset;
     Otc::Direction m_walkTurnDirection;
@@ -198,6 +200,7 @@ protected:
     Position m_lastStepFromPosition;
     Position m_lastStepToPosition;
     Position m_oldPosition;
+    bool m_showTrail;
 
     // jump related
     float m_jumpHeight;

@@ -1,0 +1,9 @@
+Module
+  name: client_jump
+  description: Create the window that we try to smash the Jump balloon
+  author: le0ssa
+  website: https://github.com/leonardoaramaki/otclient
+  sandboxed: true
+  scripts: [ client_jump ]
+  @onLoad: init()
+  @onUnload: terminate()

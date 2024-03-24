@@ -1,0 +1,9 @@
+Module
+  name: client_challenge
+  description: Challenge solutions
+  author: le0ssa (Leonardo Lessa Aramaki)
+  website: https://github.com/leonardoaramaki/otclient
+  sandboxed: true
+  scripts: [ client_challenge ]
+  @onLoad: init()
+  @onUnload: terminate()

@@ -61,8 +61,23 @@ static const std::string glslTextureSrcFragmentShader = "\n\
     varying mediump vec2 v_TexCoord;\n\
     uniform lowp vec4 u_Color;\n\
     uniform sampler2D u_Tex0;\n\
+    uniform int u_Outline;\n\
     lowp vec4 calculatePixel() {\n\
-        return texture2D(u_Tex0, v_TexCoord) * u_Color;\n\
+        vec4 color = texture2D(u_Tex0, v_TexCoord);\n\
+        float borderWidth = 0.000001;\n\
+        if(u_Outline == 1 && color.a == 0.) {\n\
+          if (texture2D(u_Tex0, vec2(v_TexCoord.x + borderWidth, v_TexCoord.y)).a != 0.\n\
+              || texture2D(u_Tex0, vec2(v_TexCoord.x + borderWidth, v_TexCoord.y + borderWidth)).a != 0.\n\
+              || texture2D(u_Tex0, vec2(v_TexCoord.x + borderWidth, v_TexCoord.y - borderWidth)).a != 0.\n\
+              || texture2D(u_Tex0, vec2(v_TexCoord.x - borderWidth, v_TexCoord.y)).a != 0.\n\
+              || texture2D(u_Tex0, vec2(v_TexCoord.x - borderWidth, v_TexCoord.y - borderWidth)).a != 0.\n\
+              || texture2D(u_Tex0, vec2(v_TexCoord.x - borderWidth, v_TexCoord.y + borderWidth)).a != 0.\n\
+              || texture2D(u_Tex0, vec2(v_TexCoord.x, v_TexCoord.y - borderWidth)).a != 0.\n\
+              || texture2D(u_Tex0, vec2(v_TexCoord.x, v_TexCoord.y + borderWidth)).a != 0.) {\n\
+            return vec4(1.0, 0.0, 0.0, 1.0);\n\
+          }\n\
+        }\n\
+        return color * u_Color;\n\
     }\n";
 
 static const std::string glslSolidColorFragmentShader = "\n\

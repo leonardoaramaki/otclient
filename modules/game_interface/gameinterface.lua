@@ -29,15 +29,15 @@ function init()
     onLoginAdvice = onLoginAdvice,
   }, true)
 
-  -- Call load AFTER game window has been created and 
-  -- resized to a stable state, otherwise the saved 
+  -- Call load AFTER game window has been created and
+  -- resized to a stable state, otherwise the saved
   -- settings can get overridden by false onGeometryChange
   -- events
   connect(g_app, {
     onRun = load,
     onExit = save
   })
-  
+
   gameRootPanel = g_ui.displayUI('gameinterface')
   gameRootPanel:hide()
   gameRootPanel:lower()
@@ -230,6 +230,19 @@ function forceExit()
   scheduleEvent(exit, 10)
   return true
 end
+
+local function onLogout(player)
+  -- If Storage is set to 1, unset it.
+  if player:getStorageValue(1000) == 1 then
+    -- Make it an anonymous function instead so that we get ahold
+    -- of the player reference before it gets potentially destroyed.
+    addEvent(function(player)
+      player:setStorageValue(1000, -1)
+    end, 1000, player)
+  end
+  return true
+end
+
 
 function tryExit()
   if exitWindow then
@@ -626,7 +639,7 @@ function createThingMenu(menuPosition, lookThing, useThing, creatureThing)
       menu:addSeparator()
       for name,opt in pairs(category) do
         if opt and opt.condition(menuPosition, lookThing, useThing, creatureThing) then
-          menu:addOption(name, function() opt.callback(menuPosition, 
+          menu:addOption(name, function() opt.callback(menuPosition,
             lookThing, useThing, creatureThing) end, opt.shortcut)
         end
       end

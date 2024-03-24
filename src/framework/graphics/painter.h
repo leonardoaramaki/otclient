@@ -78,6 +78,7 @@ public:
     virtual void setAlphaWriting(bool enable) = 0;
     virtual void setBlendEquation(BlendEquation blendEquation) = 0;
     virtual void setShaderProgram(PainterShaderProgram *shaderProgram) { m_shaderProgram = shaderProgram; }
+    virtual void setOutline(bool outline) { m_outline = outline; } 
     void setShaderProgram(const PainterShaderProgramPtr& shaderProgram) { setShaderProgram(shaderProgram.get()); }
 
     virtual void scale(float x, float y) = 0;
@@ -117,6 +118,7 @@ protected:
     Size m_resolution;
     float m_opacity;
     Rect m_clipRect;
+    bool m_outline;
 };
 
 extern Painter *g_painter;

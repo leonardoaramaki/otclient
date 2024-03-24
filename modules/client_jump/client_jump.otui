@@ -1,0 +1,4 @@
+MainWindow
+  size: 200 200
+  @onEnter: modules.client_jump.destroy()
+  @onEscape: modules.client_jump.destroy()

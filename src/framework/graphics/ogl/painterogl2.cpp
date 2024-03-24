@@ -85,6 +85,7 @@ void PainterOGL2::drawCoords(CoordsBuffer& coordsBuffer, DrawMode drawMode)
     }
     m_drawProgram->setOpacity(m_opacity);
     m_drawProgram->setColor(m_color);
+    m_drawProgram->setOutline(m_outline);
     m_drawProgram->setResolution(m_resolution);
     m_drawProgram->updateTime();
 
@@ -211,3 +212,4 @@ void PainterOGL2::drawBoundingRect(const Rect& dest, int innerLineWidth)
     m_coordsBuffer.addBoudingRect(dest, innerLineWidth);
     drawCoords(m_coordsBuffer);
 }
+

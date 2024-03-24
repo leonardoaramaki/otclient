@@ -21,6 +21,7 @@
  */
 
 #include "creature.h"
+#include "const.h"
 #include "thingtypemanager.h"
 #include "localplayer.h"
 #include "map.h"
@@ -82,7 +83,10 @@ void Creature::draw(const Point& dest, float scaleFactor, bool animate, LightVie
         g_painter->setColor(Color::white);
     }
 
-    internalDrawOutfit(dest + animationOffset * scaleFactor, scaleFactor, animate, animate, m_direction);
+    // Q6 - disable walk animation - this should be guarded by a storage/feature flag, but
+    // time is of the essence, and we are running out...
+    bool animateWalk = false;
+    internalDrawOutfit(dest + animationOffset * scaleFactor, scaleFactor, animateWalk, animate, m_direction);
     m_footStepDrawn = true;
 
     if(lightView) {
@@ -135,33 +139,62 @@ void Creature::internalDrawOutfit(Point dest, float scaleFactor, bool animateWal
 
         PointF jumpOffset = m_jumpOffset * scaleFactor;
         dest -= Point(stdext::round(jumpOffset.x), stdext::round(jumpOffset.y));
+        // copy destination Point so we can do deltas on it
+        Point trailDest = dest;
 
-        // yPattern => creature addon
-        for(int yPattern = 0; yPattern < getNumPatternY(); yPattern++) {
+        // Number of trail "shadows" behind local player character
+        uint8_t trailStepCount = (m_showTrail && isLocalPlayer()) ? 5 : 1;
+        uint8_t firstInRow = 0;
+        float opacity = 1.0f;
 
-            // continue if we dont have this addon
-            if(yPattern > 0 && !(m_outfit.getAddons() & (1 << (yPattern-1))))
-                continue;
+        // save current opacity to restore later
+        float oldOpacity = g_painter->getOpacity();
+        for(int step = 0; step < trailStepCount; step++) {
+            // most opaque is front of the line according to where they are headed
+            g_painter->setOpacity(opacity);
+            // yPattern => creature addon
+            for(int yPattern = 0; yPattern < getNumPatternY(); yPattern++) {
 
-            auto datType = rawGetThingType();
-            datType->draw(dest, scaleFactor, 0, xPattern, yPattern, zPattern, animationPhase, yPattern == 0 ? lightView : nullptr);
+                // continue if we dont have this addon
+                if(yPattern > 0 && !(m_outfit.getAddons() & (1 << (yPattern-1))))
+                    continue;
 
-            if(getLayers() > 1) {
-                Color oldColor = g_painter->getColor();
-                Painter::CompositionMode oldComposition = g_painter->getCompositionMode();
-                g_painter->setCompositionMode(Painter::CompositionMode_Multiply);
-                g_painter->setColor(m_outfit.getHeadColor());
-                datType->draw(dest, scaleFactor, SpriteMaskYellow, xPattern, yPattern, zPattern, animationPhase);
-                g_painter->setColor(m_outfit.getBodyColor());
-                datType->draw(dest, scaleFactor, SpriteMaskRed, xPattern, yPattern, zPattern, animationPhase);
-                g_painter->setColor(m_outfit.getLegsColor());
-                datType->draw(dest, scaleFactor, SpriteMaskGreen, xPattern, yPattern, zPattern, animationPhase);
-                g_painter->setColor(m_outfit.getFeetColor());
-                datType->draw(dest, scaleFactor, SpriteMaskBlue, xPattern, yPattern, zPattern, animationPhase);
-                g_painter->setColor(oldColor);
-                g_painter->setCompositionMode(oldComposition);
+                // set outline on painter, and hence, on the shader, if creature is local player
+                // and currently is walking
+                auto outline = isLocalPlayer() && m_showTrail && (step == firstInRow);
+                g_painter->setOutline(outline);
+                auto datType = rawGetThingType();
+                datType->draw(trailDest, scaleFactor, 0, xPattern, yPattern, zPattern, animationPhase, yPattern == 0 ? lightView : nullptr);
+                // disable outline for everything else
+                g_painter->setOutline(false);
+                if(getLayers() > 1) {
+                    Color oldColor = g_painter->getColor();
+                    Painter::CompositionMode oldComposition = g_painter->getCompositionMode();
+                    g_painter->setCompositionMode(Painter::CompositionMode_Multiply);
+                    g_painter->setColor(m_outfit.getHeadColor());
+                    datType->draw(trailDest, scaleFactor, SpriteMaskYellow, xPattern, yPattern, zPattern, animationPhase);
+                    g_painter->setColor(m_outfit.getBodyColor());
+                    datType->draw(trailDest, scaleFactor, SpriteMaskRed, xPattern, yPattern, zPattern, animationPhase);
+                    g_painter->setColor(m_outfit.getLegsColor());
+                    datType->draw(trailDest, scaleFactor, SpriteMaskGreen, xPattern, yPattern, zPattern, animationPhase);
+                    g_painter->setColor(m_outfit.getFeetColor());
+                    datType->draw(trailDest, scaleFactor, SpriteMaskBlue, xPattern, yPattern, zPattern, animationPhase);
+                    g_painter->setColor(oldColor);
+                    g_painter->setCompositionMode(oldComposition);
+                }
             }
+            if (direction == Otc::East) {
+                trailDest.x -= 20;
+            } else if (direction == Otc::West) {
+                trailDest.x += 20;
+            } else if (direction == Otc::North) {
+                trailDest.y += 20;
+            } else if (direction == Otc::South) {
+                trailDest.y -= 20;
+            }
+            opacity -= 0.2f;
         }
+        g_painter->setOpacity(oldOpacity);
     // outfit is a creature imitating an item or the invisible effect
     } else  {
         ThingType *type = g_things.rawGetThingType(m_outfit.getAuxId(), m_outfit.getCategory());
@@ -207,19 +240,24 @@ void Creature::drawOutfit(const Rect& destRect, bool resize)
     else if(!(frameSize = exactSize))
         return;
 
+    // Q6 - disable walk animation - this should be guarded by a storage/feature flag, but
+    // time is of the essence, and we are running out...
+    auto animateWalk = false;
     if(g_graphics.canUseFBO()) {
         const FrameBufferPtr& outfitBuffer = g_framebuffers.getTemporaryFrameBuffer();
         outfitBuffer->resize(Size(frameSize, frameSize));
         outfitBuffer->bind();
         g_painter->setAlphaWriting(true);
         g_painter->clear(Color::alpha);
-        internalDrawOutfit(Point(frameSize - Otc::TILE_PIXELS, frameSize - Otc::TILE_PIXELS) + getDisplacement(), 1, false, true, Otc::South);
+        // Q6 - disable walk animation - this should be guarded by a storage/feature flag, but
+        // time is of the essence, and we are running out...
+        internalDrawOutfit(Point(frameSize - Otc::TILE_PIXELS, frameSize - Otc::TILE_PIXELS) + getDisplacement(), 1, false, animateWalk, Otc::South);
         outfitBuffer->release();
         outfitBuffer->draw(destRect, Rect(0,0,frameSize,frameSize));
     } else {
         float scaleFactor = destRect.width() / (float)frameSize;
         Point dest = destRect.bottomRight() - (Point(Otc::TILE_PIXELS,Otc::TILE_PIXELS) - getDisplacement()) * scaleFactor;
-        internalDrawOutfit(dest, scaleFactor, false, true, Otc::South);
+        internalDrawOutfit(dest, scaleFactor, false, animateWalk, Otc::South);
     }
 }
 
@@ -349,6 +387,7 @@ void Creature::walk(const Position& oldPos, const Position& newPos)
     m_walking = true;
     m_walkTimer.restart();
     m_walkedPixels = 0;
+    m_showTrail = true;
 
     if(m_walkFinishAnimEvent) {
         m_walkFinishAnimEvent->cancel();
@@ -551,8 +590,9 @@ void Creature::updateWalkingTile()
     }
 
     if(newWalkingTile != m_walkingTile) {
-        if(m_walkingTile)
-            m_walkingTile->removeWalkingCreature(static_self_cast<Creature>());
+        // Commented in as removes shadows
+        //if(m_walkingTile)
+        //    m_walkingTile->removeWalkingCreature(static_self_cast<Creature>());
         if(newWalkingTile) {
             newWalkingTile->addWalkingCreature(static_self_cast<Creature>());
 
@@ -609,6 +649,12 @@ void Creature::terminateWalk()
         m_walkUpdateEvent = nullptr;
     }
 
+    // remove any scheduled walk update
+    if(m_walkFinishedEvent) {
+        m_walkFinishedEvent->cancel();
+        m_walkFinishedEvent = nullptr;
+    }
+
     // now the walk has ended, do any scheduled turn
     if(m_walkTurnDirection != Otc::InvalidDirection)  {
         setDirection(m_walkTurnDirection);
@@ -626,6 +672,10 @@ void Creature::terminateWalk()
     // reset walk animation states
     m_walkOffset = Point(0,0);
     m_walkAnimationPhase = 0;
+    auto self = static_self_cast<Creature>();
+    m_walkFinishedEvent = g_dispatcher.scheduleEvent([self] {
+        self->m_showTrail = false;
+    }, getStepDuration(true) + 200);
 }
 
 void Creature::setName(const std::string& name)

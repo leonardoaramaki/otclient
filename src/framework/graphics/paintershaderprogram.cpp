@@ -34,6 +34,7 @@ PainterShaderProgram::PainterShaderProgram()
     m_opacity = 1;
     m_color = Color::white;
     m_time = 0;
+    m_outline = false;
 }
 
 void PainterShaderProgram::setupUniforms()
@@ -49,6 +50,7 @@ void PainterShaderProgram::setupUniforms()
     bindUniformLocation(TEX2_UNIFORM, "u_Tex2");
     bindUniformLocation(TEX3_UNIFORM, "u_Tex3");
     bindUniformLocation(RESOLUTION_UNIFORM, "u_Resolution");
+    bindUniformLocation(OUTLINE_UNIFORM, "u_Outline");
 
     setUniformValue(TRANSFORM_MATRIX_UNIFORM, m_transformMatrix);
     setUniformValue(PROJECTION_MATRIX_UNIFORM, m_projectionMatrix);
@@ -61,6 +63,7 @@ void PainterShaderProgram::setupUniforms()
     setUniformValue(TEX2_UNIFORM, 2);
     setUniformValue(TEX3_UNIFORM, 3);
     setUniformValue(RESOLUTION_UNIFORM, (float)m_resolution.width(), (float)m_resolution.height());
+    setUniformValue(OUTLINE_UNIFORM, m_outline ? 1 : 0);
 }
 
 bool PainterShaderProgram::link()
@@ -135,6 +138,16 @@ void PainterShaderProgram::setResolution(const Size& resolution)
     bind();
     setUniformValue(RESOLUTION_UNIFORM, (float)resolution.width(), (float)resolution.height());
     m_resolution = resolution;
+}
+
+void PainterShaderProgram::setOutline(bool outline)
+{
+    if (m_outline == outline)
+        return;
+
+    bind();
+    setUniformValue(OUTLINE_UNIFORM, outline ? 1 : 0);
+    m_outline = outline;
 }
 
 void PainterShaderProgram::updateTime()

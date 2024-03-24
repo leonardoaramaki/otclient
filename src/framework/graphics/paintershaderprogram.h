@@ -43,7 +43,8 @@ protected:
         TEX2_UNIFORM = 7,
         TEX3_UNIFORM = 8,
         RESOLUTION_UNIFORM = 9,
-        TRANSFORM_MATRIX_UNIFORM = 10
+        TRANSFORM_MATRIX_UNIFORM = 10,
+        OUTLINE_UNIFORM = 11
     };
 
     friend class PainterOGL2;
@@ -61,6 +62,7 @@ public:
     void setColor(const Color& color);
     void setOpacity(float opacity);
     void setResolution(const Size& resolution);
+    void setOutline(bool outline);
     void updateTime();
 
     void addMultiTexture(const std::string& file);
@@ -71,6 +73,7 @@ private:
 
     Color m_color;
     float m_opacity;
+    bool m_outline;
     Matrix3 m_transformMatrix;
     Matrix3 m_projectionMatrix;
     Matrix3 m_textureMatrix;
